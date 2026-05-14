@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Card {
+  id          String         @id @default(uuid())
+  name        String
+  series      String         // เช่น Pokemon, One Piece, Naruto
+  imageUrl    String?        // รูปภาพการ์ด
+  cardNumber  String?        // รหัสการ์ด เช่น OP01-001
+  prices      PriceHistory[] // เชื่อมโยงกับประวัติราคา
+  createdAt   DateTime       @default(now())
+}
+
+model PriceHistory {
+  id          String   @id @default(uuid())
+  price       Float    // ราคา
+  sourceUrl   String?  // ลิงก์อ้างอิงราคา
+  cardId      String
+  card        Card     @relation(fields: [cardId], references: [id])
+  updatedAt   DateTime @default(now())
+}
