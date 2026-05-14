@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import SearchFilter from './components/SearchFilter';
+import { Suspense } from 'react'; // 👈 1. เพิ่มบรรทัดนี้เข้ามา
 
-// รับค่า searchParams จาก URL อัตโนมัติ
 export default async function Home({
   searchParams,
 }: {
@@ -10,21 +10,19 @@ export default async function Home({
   const query = searchParams?.q || '';
   const box = searchParams?.box || '';
 
-  // 1. ดึงรายชื่อ Box/Series ทั้งหมดที่ไม่ซ้ำกันมาทำตัวเลือก Dropdown
   const uniqueBoxes = await prisma.card.findMany({
     select: { series: true },
     distinct: ['series'],
   });
   const boxList = uniqueBoxes.map((b) => b.series);
 
-  // 2. ดึงการ์ดจาก Database ตามเงื่อนไขการค้นหา
   const cards = await prisma.card.findMany({
     where: {
       name: {
         contains: query,
-        mode: 'insensitive', // ค้นหาได้ทั้งตัวพิมพ์เล็กและใหญ่ (ใช้ได้เฉพาะ PostgreSQL)
+        mode: 'insensitive',
       },
-      ...(box ? { series: box } : {}), // ถ้ามีการเลือก Box ถึงจะเพิ่มเงื่อนไขนี้
+      ...(box ? { series: box } : {}),
     },
     include: {
       prices: {
@@ -41,8 +39,10 @@ export default async function Home({
           TCG Price Tracker
         </h1>
         
-        {/* เรียกใช้งานแถบค้นหาและส่งรายชื่อ Box ไปให้ */}
-        <SearchFilter boxes={boxList} />
+        {/* 👇 2. เอา Suspense มาครอบ SearchFilter พร้อมใส่ข้อความตอนโหลด */}
+        <Suspense fallback={<div className="mb-8 text-center text-slate-500">กำลังโหลดระบบค้นหา...</div>}>
+          <SearchFilter boxes={boxList} />
+        </Suspense>
         
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {cards.length > 0 ? (
@@ -84,7 +84,6 @@ export default async function Home({
               </div>
             ))
           ) : (
-            // กรณีค้นหาแล้วไม่เจอการ์ด
             <div className="col-span-full text-center py-10 text-slate-500 text-lg">
               ไม่พบการ์ดที่คุณค้นหา 😢
             </div>
