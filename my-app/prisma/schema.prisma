@@ -15,6 +15,7 @@ model Card {
   cardNumber  String?        
   currentPrice Float @default(0)
   prices      PriceHistory[] 
+  rarity String? @default("Base")
   createdAt   DateTime       @default(now())
 }
 

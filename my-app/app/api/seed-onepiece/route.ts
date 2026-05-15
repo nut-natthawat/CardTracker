@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 import { prisma } from '@/lib/prisma';
 
+// 👇 สร้างฟังก์ชัน "พักหายใจ" ให้บอท
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -16,6 +19,8 @@ export async function GET(request: Request) {
     };
 
     const mainRes = await fetch(seriesUrl, fetchOptions);
+    if (!mainRes.ok) throw new Error(`ไม่สามารถเข้าถึงหน้าชุดการ์ดได้ (Status: ${mainRes.status})`);
+    
     const mainHtml = await mainRes.text();
     const $main = cheerio.load(mainHtml);
 
@@ -32,71 +37,106 @@ export async function GET(request: Request) {
     const scrapedData = [];
 
     for (const link of cardLinks) {
-      const cardRes = await fetch(link, fetchOptions);
-      const cardHtml = await cardRes.text();
-      const $ = cheerio.load(cardHtml);
-
-      const name = $('.card-text-name a').text().trim();
-      const cardNumber = $('.card-text-id').text().trim();
-      let imageUrl = $('.card-image img').attr('src');
-      if (imageUrl && !imageUrl.startsWith('http')) imageUrl = `${baseUrl}${imageUrl}`;
-
-      const priceText = $('.card-buy-button.usd').text().trim();
-      const cleanPriceText = priceText.replace(/,/g, ''); 
-      const priceMatch = cleanPriceText.match(/\$([0-9.]+)/);
-      const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
-
-      if (name && imageUrl) {
-        const existingCard = await prisma.card.findUnique({
-          where: { imageUrl: imageUrl }
-        });
-
-        let currentCardId;
-
-        if (existingCard) {
-          let updatedSeries = existingCard.series;
-          if (!updatedSeries.includes(formattedSeries)) {
-            updatedSeries = `${existingCard.series}, ${formattedSeries}`; 
-          }
-
-          const card = await prisma.card.update({
-            where: { id: existingCard.id },
-            data: { 
-              currentPrice: price, 
-              series: updatedSeries 
-            }
-          });
-          currentCardId = card.id;
-          scrapedData.push({ name, cardNumber, price, series: updatedSeries, status: 'Updated' });
-
-        } else {
-          const card = await prisma.card.create({
-            data: { 
-              name, 
-              series: formattedSeries, 
-              imageUrl, 
-              cardNumber,
-              currentPrice: price
-            }
-          });
-          currentCardId = card.id;
-          scrapedData.push({ name, cardNumber, price, series: formattedSeries, status: 'Created' });
+      try {
+        const cardRes = await fetch(link, fetchOptions);
+        if (!cardRes.ok) {
+          console.warn(`[SKIP] โดนบล็อกหรือดึงไม่ได้ที่ลิงก์: ${link}`);
+          continue; // ถ้าใบนี้พัง ให้ข้ามไปทำใบต่อไปเลย ไม่ต้องช็อต
         }
 
-        await prisma.priceHistory.create({
-          data: { cardId: currentCardId, price, sourceUrl: link }
-        });
+        const cardHtml = await cardRes.text();
+        const $ = cheerio.load(cardHtml);
+
+        const name = $('.card-text-name a').text().trim();
+        const cardNumber = $('.card-text-id').text().trim();
+        let imageUrl = $('.card-image img').attr('src');
+        if (imageUrl && !imageUrl.startsWith('http')) imageUrl = `${baseUrl}${imageUrl}`;
+
+        const priceText = $('.card-buy-button.usd').text().trim();
+        const cleanPriceText = priceText.replace(/,/g, ''); 
+        const priceMatch = cleanPriceText.match(/\$([0-9.]+)/);
+        const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
+
+        // วิเคราะห์ความแรร์ (Rarity Heuristics)
+        let cardRarity = "Base";
+        const lowerImgUrl = imageUrl?.toLowerCase() || '';
+        const lowerName = name.toLowerCase();
+
+        if (lowerImgUrl.includes('_p1') || lowerImgUrl.includes('-p1')) {
+          cardRarity = "AA";
+        } else if (lowerImgUrl.includes('_p2') || lowerImgUrl.includes('-p2') || lowerImgUrl.includes('_p3') || lowerImgUrl.includes('-p3') || lowerImgUrl.includes('_p4')) {
+          cardRarity = price > 100 ? "Manga / SP" : "AA";
+        } else if (lowerImgUrl.includes('sp') || lowerName.includes('special')) {
+          cardRarity = "SP";
+        } else if (lowerImgUrl.includes('tr') || lowerName.includes('treasure')) {
+          cardRarity = "TR";
+        }
+
+        if (cardNumber.includes('L') && cardRarity === "Base") {
+          cardRarity = "Leader";
+        } else if (cardNumber.startsWith('P-') || cardNumber.startsWith('ST')) {
+          if (cardRarity === "Base") cardRarity = "Promo / ST";
+        }
+
+        if (name && imageUrl) {
+          const existingCard = await prisma.card.findUnique({
+            where: { imageUrl: imageUrl }
+          });
+
+          let currentCardId;
+
+          if (existingCard) {
+            let updatedSeries = existingCard.series;
+            if (!updatedSeries.includes(formattedSeries)) {
+              updatedSeries = `${existingCard.series}, ${formattedSeries}`;
+            }
+
+            const card = await prisma.card.update({
+              where: { id: existingCard.id },
+              data: { 
+                currentPrice: price, 
+                series: updatedSeries,
+                rarity: cardRarity
+              }
+            });
+            currentCardId = card.id;
+            scrapedData.push({ name, cardNumber, price, rarity: cardRarity, status: 'Updated' });
+
+          } else {
+            const card = await prisma.card.create({
+              data: { 
+                name, 
+                series: formattedSeries, 
+                imageUrl, 
+                cardNumber,
+                currentPrice: price,
+                rarity: cardRarity
+              }
+            });
+            currentCardId = card.id;
+            scrapedData.push({ name, cardNumber, price, rarity: cardRarity, status: 'Created' });
+          }
+
+          await prisma.priceHistory.create({
+            data: { cardId: currentCardId, price, sourceUrl: link }
+          });
+        }
+      } catch (innerError) {
+        console.error(`[ERROR] พังที่การ์ด: ${link}`, innerError);
+        // ถึงจะพังก็ให้ลูปทำงานต่อ
       }
+      
+      // 👇 ให้บอทพักหายใจ 0.2 วินาที ก่อนดึงการ์ดใบต่อไป (เนียนเป็นมนุษย์)
+      await delay(200); 
     }
 
     return NextResponse.json({
       message: `บันทึกซีรีส์ ${targetSeries} สำเร็จ ${scrapedData.length} ใบ`,
-      savedSeriesAs: formattedSeries,
       data: scrapedData
     });
 
   } catch (error) {
     console.error("Bot Error:", error);
-    return NextResponse.json({ error: 'บอททำงานขัดข้อง' }, { status: 500 });
+    return NextResponse.json({ error: 'Bot Error' }, { status: 500 });
   }
 }
