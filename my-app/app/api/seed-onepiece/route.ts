@@ -58,25 +58,31 @@ export async function GET(request: Request) {
         const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
 
         // วิเคราะห์ความแรร์ (Rarity Heuristics)
+        // วิเคราะห์ความแรร์ (Rarity Heuristics) - เวอร์ชันอัปเกรดความแม่นยำ
         let cardRarity = "Base";
         const lowerImgUrl = imageUrl?.toLowerCase() || '';
         const lowerName = name.toLowerCase();
+        const upperCardNum = cardNumber.toUpperCase(); // ดึงเลขการ์ดมาเช็คด้วย
 
         if (lowerImgUrl.includes('_p1') || lowerImgUrl.includes('-p1')) {
           cardRarity = "AA";
-        } else if (lowerImgUrl.includes('_p2') || lowerImgUrl.includes('-p2') || lowerImgUrl.includes('_p3') || lowerImgUrl.includes('-p3') || lowerImgUrl.includes('_p4')) {
+        } else if (lowerImgUrl.includes('_p2') || lowerImgUrl.includes('-p2') || lowerImgUrl.includes('_p3') || lowerImgUrl.includes('-p3') || lowerImgUrl.includes('_p4') || lowerImgUrl.includes('-p4')) {
           cardRarity = price > 100 ? "Manga / SP" : "AA";
-        } else if (lowerImgUrl.includes('sp') || lowerName.includes('special')) {
+        } 
+        // 👇 แก้ตรงนี้: บังคับว่าต้องมี _ หรือ - นำหน้า sp และ tr เท่านั้น
+        else if (lowerImgUrl.includes('_sp') || lowerImgUrl.includes('-sp') || upperCardNum.includes('-SP')) {
           cardRarity = "SP";
-        } else if (lowerImgUrl.includes('tr') || lowerName.includes('treasure')) {
+        } else if (lowerImgUrl.includes('_tr') || lowerImgUrl.includes('-tr')) {
           cardRarity = "TR";
         }
 
-        if (cardNumber.includes('L') && cardRarity === "Base") {
+        // จัดกลุ่ม Leader และ Promo
+        if (upperCardNum.includes('L') && cardRarity === "Base") {
           cardRarity = "Leader";
-        } else if (cardNumber.startsWith('P-') || cardNumber.startsWith('ST')) {
+        } else if (upperCardNum.startsWith('P-') || upperCardNum.startsWith('ST')) {
           if (cardRarity === "Base") cardRarity = "Promo / ST";
         }
+
 
         if (name && imageUrl) {
           const existingCard = await prisma.card.findUnique({
