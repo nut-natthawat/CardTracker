@@ -6,7 +6,6 @@ export default function SearchFilter({ boxes }: { boxes: string[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // ฟังก์ชันอัปเดต URL เมื่อพิมพ์ค้นหา
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const params = new URLSearchParams(searchParams);
     if (e.target.value) {
@@ -17,7 +16,6 @@ export default function SearchFilter({ boxes }: { boxes: string[] }) {
     router.replace(`/?${params.toString()}`);
   };
 
-  // ฟังก์ชันอัปเดต URL เมื่อเลือก Box
   const handleBoxChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const params = new URLSearchParams(searchParams);
     if (e.target.value) {
@@ -30,7 +28,6 @@ export default function SearchFilter({ boxes }: { boxes: string[] }) {
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-8">
-      {/* ช่องค้นหาชื่อ */}
       <input
         type="text"
         placeholder="ค้นหาชื่อการ์ด..."
@@ -39,7 +36,6 @@ export default function SearchFilter({ boxes }: { boxes: string[] }) {
         className="flex-1 p-3 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
 
-      {/* Dropdown เลือกกล่อง/ซีรีส์ */}
       <select
         defaultValue={searchParams.get('box') || ''}
         onChange={handleBoxChange}

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 import { prisma } from '@/lib/prisma';
 
-// 👇 สร้างฟังก์ชัน "พักหายใจ" ให้บอท
 const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export async function GET(request: Request) {
@@ -41,7 +40,7 @@ export async function GET(request: Request) {
         const cardRes = await fetch(link, fetchOptions);
         if (!cardRes.ok) {
           console.warn(`[SKIP] โดนบล็อกหรือดึงไม่ได้ที่ลิงก์: ${link}`);
-          continue; // ถ้าใบนี้พัง ให้ข้ามไปทำใบต่อไปเลย ไม่ต้องช็อต
+          continue; 
         }
 
         const cardHtml = await cardRes.text();
@@ -57,26 +56,22 @@ export async function GET(request: Request) {
         const priceMatch = cleanPriceText.match(/\$([0-9.]+)/);
         const price = priceMatch ? parseFloat(priceMatch[1]) : 0;
 
-        // วิเคราะห์ความแรร์ (Rarity Heuristics)
-        // วิเคราะห์ความแรร์ (Rarity Heuristics) - เวอร์ชันอัปเกรดความแม่นยำ
         let cardRarity = "Base";
         const lowerImgUrl = imageUrl?.toLowerCase() || '';
         const lowerName = name.toLowerCase();
-        const upperCardNum = cardNumber.toUpperCase(); // ดึงเลขการ์ดมาเช็คด้วย
+        const upperCardNum = cardNumber.toUpperCase(); 
 
         if (lowerImgUrl.includes('_p1') || lowerImgUrl.includes('-p1')) {
           cardRarity = "AA";
         } else if (lowerImgUrl.includes('_p2') || lowerImgUrl.includes('-p2') || lowerImgUrl.includes('_p3') || lowerImgUrl.includes('-p3') || lowerImgUrl.includes('_p4') || lowerImgUrl.includes('-p4')) {
           cardRarity = price > 100 ? "Manga / SP" : "AA";
         } 
-        // 👇 แก้ตรงนี้: บังคับว่าต้องมี _ หรือ - นำหน้า sp และ tr เท่านั้น
         else if (lowerImgUrl.includes('_sp') || lowerImgUrl.includes('-sp') || upperCardNum.includes('-SP')) {
           cardRarity = "SP";
         } else if (lowerImgUrl.includes('_tr') || lowerImgUrl.includes('-tr')) {
           cardRarity = "TR";
         }
 
-        // จัดกลุ่ม Leader และ Promo
         if (upperCardNum.includes('L') && cardRarity === "Base") {
           cardRarity = "Leader";
         } else if (upperCardNum.startsWith('P-') || upperCardNum.startsWith('ST')) {
@@ -129,10 +124,8 @@ export async function GET(request: Request) {
         }
       } catch (innerError) {
         console.error(`[ERROR] พังที่การ์ด: ${link}`, innerError);
-        // ถึงจะพังก็ให้ลูปทำงานต่อ
       }
       
-      // 👇 ให้บอทพักหายใจ 0.2 วินาที ก่อนดึงการ์ดใบต่อไป (เนียนเป็นมนุษย์)
       await delay(200); 
     }
 

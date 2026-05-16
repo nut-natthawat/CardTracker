@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-// 1. ดึงการ์ดทั้งหมดของชุดนั้นๆ (ไม่ต้องมีหน้า เพื่อให้แก้รวดเดียวจบ)
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -11,7 +10,7 @@ export async function GET(request: Request) {
 
     const cards = await prisma.card.findMany({
       where: { series: { contains: series, mode: 'insensitive' } },
-      orderBy: { cardNumber: 'asc' } // เรียงตามเลขการ์ด จะได้หาง่ายๆ
+      orderBy: { cardNumber: 'asc' } 
     });
 
     return NextResponse.json(cards);
@@ -20,7 +19,6 @@ export async function GET(request: Request) {
   }
 }
 
-// 2. รับค่ามาเพื่ออัปเดตความแรร์ทีละใบแบบ Auto-save
 export async function POST(request: Request) {
   try {
     const { id, rarity } = await request.json();

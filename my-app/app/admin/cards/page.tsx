@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 
 const SERIES_LIST = [
+  { id: '', name: 'All Series' },
   { id: 'OP01', name: 'OP-01 Romance Dawn' },
   { id: 'OP02', name: 'OP-02 Paramount War' },
   { id: 'OP03', name: 'OP-03 Pillars of Strength' },
@@ -13,14 +14,16 @@ const SERIES_LIST = [
   { id: 'OP08', name: 'OP-08 Two Legends' },
   { id: 'OP09', name: 'OP-09 The New Emperor' },
   { id: 'OP10', name: 'OP-10 Royal Blood' },
-  { id: 'OP11', name: 'OP-11' },
-  { id: 'OP12', name: 'OP-12' },
-  { id: 'OP13', name: 'OP-13' },
-  { id: 'OP14', name: 'OP-14' },
+  { id: 'OP11', name: 'OP-11 A Fist of Divine Speed' },
+  { id: 'OP12', name: 'OP-12 Legacy of the Master' },
+  { id: 'OP13', name: 'OP-13 Carrying on His Will' },
+  { id: 'OP14', name: 'OP-14 The Azure Seas Seven' },
   { id: 'OP15', name: 'OP-15 Adventure on Kamis Island' },
   { id: 'EB01', name: 'EB-01 Memorial Collection' },
   { id: 'EB02', name: 'EB-02 Anime 25th Collection' },
+  { id: 'EB03', name: 'EB-03 One Piece Heroines Edition' },
   { id: 'PRB01', name: 'PRB-01 The Best vol1' },
+  { id: 'PRB02', name: 'PRB-02 The Best vol2' },
 ];
 
 const RARITY_OPTIONS = ["Base", "AA", "Manga", "SP", "TR", "Leader", "SEC", "SR", "R", "UC", "C", "Promo"];
@@ -47,7 +50,6 @@ export default function AdminCardsEditor() {
     fetchCards(series);
   }, [series]);
 
-  // ฟังก์ชันอัปเดตแบบ Auto-save
   const handleRarityChange = async (cardId: string, newRarity: string) => {
     setSavingId(cardId);
     try {
@@ -57,7 +59,6 @@ export default function AdminCardsEditor() {
         body: JSON.stringify({ id: cardId, rarity: newRarity })
       });
       
-      // อัปเดต state ทันทีเพื่อให้ UI เปลี่ยนโดยไม่ต้องโหลดใหม่
       setCards(cards.map(c => c.id === cardId ? { ...c, rarity: newRarity } : c));
     } catch (err) {
       alert("เซฟไม่สำเร็จ ลองใหม่อีกครั้งครับ");
@@ -84,7 +85,6 @@ export default function AdminCardsEditor() {
         </div>
       </header>
 
-      {/* แถบเลือกชุดการ์ด */}
       <div className="bg-[#121212] border border-white/5 p-6 rounded-lg mb-8 shadow-2xl flex items-center gap-6">
         <span className="text-[11px] uppercase tracking-widest text-white/40">Select Series:</span>
         <select 
@@ -97,7 +97,6 @@ export default function AdminCardsEditor() {
         <span className="ml-auto text-[11px] font-mono text-white/30">Total: {cards.length} cards</span>
       </div>
 
-      {/* Grid แสดงการ์ดทั้งหมด */}
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="w-8 h-8 border-2 border-white/10 border-t-[#c9a227] rounded-full animate-spin"></div>
@@ -119,7 +118,6 @@ export default function AdminCardsEditor() {
                 <span className="font-mono text-[10px] text-[#c9a227]">{card.cardNumber}</span>
                 <span className="text-[10px] text-white/50 truncate" title={card.name}>{card.name}</span>
                 
-                {/* 🌟 Dropdown เลือกระดับความแรร์ (เปลี่ยนปุ๊บ เซฟปั๊บ) 🌟 */}
                 <select 
                   className="mt-2 w-full bg-[#0d0d0d] border border-white/10 text-white/80 text-[11px] p-1.5 rounded outline-none focus:border-[#c9a227] cursor-pointer"
                   value={card.rarity || "Base"}

@@ -42,7 +42,7 @@ export default function AdminDashboard() {
 
     setLoading(false);
     setCurrentTask("[ COMPLETED ]");
-    alert("บอททำงานเสร็จสิ้น ข้อมูล One Piece เต็มคลังแล้วครับ!");
+    alert("บอททำงานเสร็จสิ้น!");
   };
 
   const progressPct = series.length > 0 ? (progressCount / series.length) * 100 : 0;

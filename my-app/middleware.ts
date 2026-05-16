@@ -12,11 +12,13 @@ export function middleware(request: NextRequest) {
     const adminToken = request.cookies.get('admin_auth')?.value;
     const secret = process.env.ADMIN_SECRET_PASSWORD;
 
-    if (adminToken !== secret) {
-      if (!pathname.startsWith('/api/')) {
-        return NextResponse.redirect(new URL('/login', request.url));
+    if (!adminToken || adminToken !== secret) {
+      
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      
+      return NextResponse.redirect(new URL('/login', request.url));
     }
   }
 
@@ -24,5 +26,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*'],
+  matcher: [
+    '/admin/:path*',
+    '/api/admin/:path*',
+  ],
 };
