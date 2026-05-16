@@ -1,4 +1,4 @@
-name: Next.js CI Pipeline
+name: Next.js CI/CD Pipeline
 
 on:
   push:
@@ -28,3 +28,14 @@ jobs:
         
       - name: Build Project
         run: npm run build
+        env:
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+
+  deploy-to-render:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - name: Trigger Render Deployment
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}

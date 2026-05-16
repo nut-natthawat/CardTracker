@@ -51,7 +51,8 @@ export default function HomePage() {
   const fetchCards = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/cards?q=${query}&series=${series}&rarity=${rarity}&sort=${sort}&page=${page}`);
+      // แอบ encodeURIComponent กันเหนียว เผื่อ rarity มีช่องว่าง
+      const res = await fetch(`/api/cards?q=${query}&series=${series}&rarity=${encodeURIComponent(rarity)}&sort=${sort}&page=${page}`);
       const data = await res.json();
       setCards(data.cards || []);
       setTotalPages(data.totalPages || 1);
@@ -92,16 +93,20 @@ export default function HomePage() {
             <option value="price_low" className="bg-[#121212]">Price Ascending</option>
           </select>
 
+          {/* Filter Rarity ที่แก้ไข value ให้ตรงกับบอท */}
           <select
-            className="bg-transparent border-b border-white/10 py-2 text-[11px] uppercase tracking-wider text-white/40 outline-none cursor-pointer focus:border-[#c9a227]"
+            className="bg-transparent border-b border-white/10 py-2 text-[11px] uppercase tracking-wider text-[#c9a227] outline-none cursor-pointer focus:border-[#c9a227]"
             value={rarity}
             onChange={(e) => { setRarity(e.target.value); setPage(1); }}
           >
-            <option value="" className="bg-[#121212]">All Rarities</option>
-            <option value="AA" className="bg-[#121212]">Alternate Art (AA)</option>
-            <option value="Manga" className="bg-[#121212]">Manga / Special</option>
-            <option value="Leader" className="bg-[#121212]">Leader Cards</option>
-            <option value="Base" className="bg-[#121212]">Base Cards</option>
+            <option value="" className="bg-[#121212] text-[#e8e4dc]">♦ All Rarities</option>
+            <option value="Base" className="bg-[#121212] text-[#e8e4dc]">Base Cards</option>
+            <option value="AA" className="bg-[#121212] text-[#e8e4dc]">Alternate Art (AA)</option>
+            <option value="Manga" className="bg-[#121212] text-[#e8e4dc]">Manga / Special</option>
+            <option value="SP" className="bg-[#121212] text-[#e8e4dc]">Special (SP)</option>
+            <option value="TR" className="bg-[#121212] text-[#e8e4dc]">Treasure Rare (TR)</option>
+            <option value="Leader" className="bg-[#121212] text-[#e8e4dc]">Leader Cards</option>
+            <option value="Promo" className="bg-[#121212] text-[#e8e4dc]">Promo / Starter</option>
           </select>
         </div>
 
@@ -128,7 +133,6 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="flex-1 ml-64 p-12 overflow-y-auto h-screen custom-scrollbar">
-        {/* Box Banner */}
         {series !== '' && boxInfo && (
           <div className="mb-14 pb-10 border-b border-white/10 flex items-center gap-10 animate-in fade-in duration-700">
             {boxInfo.boxImageUrl && (
@@ -164,21 +168,22 @@ export default function HomePage() {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-y-12 gap-x-8">
               {cards.map((card) => (
                 <div key={card.id} className="group flex flex-col gap-4">
-                  <div className="aspect-[5/7] bg-[#161616] overflow-hidden">
+                  <div className="aspect-[5/7] bg-[#161616] overflow-hidden relative">
                     <img 
                       src={card.imageUrl} 
                       alt={card.name} 
                       className="w-full h-full object-cover transition-all duration-700 group-hover:scale-105 group-hover:brightness-110 grayscale-[0.2] group-hover:grayscale-0" 
                       loading="lazy" 
                     />
+                    {/* Badge Rarity แปะบนรูปให้เห็นชัดๆ */}
+                    {card.rarity && card.rarity !== "Base" && (
+                      <div className="absolute top-2 right-2 bg-black/80 backdrop-blur-sm border border-[#c9a227]/50 text-[#c9a227] text-[8px] uppercase tracking-widest px-1.5 py-0.5 rounded shadow-lg">
+                        {card.rarity}
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col gap-1">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-mono text-[9px] text-white/20 tracking-widest">{card.cardNumber}</span>
-                      {card.rarity && card.rarity !== "Base" && (
-                        <span className="text-[8px] uppercase tracking-tighter border border-white/10 px-1.5 py-0.5 rounded text-white/40">{card.rarity}</span>
-                      )}
-                    </div>
+                    <span className="font-mono text-[9px] text-white/30 tracking-widest">{card.cardNumber}</span>
                     <h3 className="text-[11px] font-medium text-white/60 line-clamp-2 leading-relaxed min-h-[2.8rem] group-hover:text-white transition-colors">{card.name}</h3>
                     <p className="font-mono text-sm text-[#c9a227] mt-1">
                       {card.currentPrice > 0 ? `฿${(card.currentPrice * 36).toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '—'}
@@ -188,7 +193,6 @@ export default function HomePage() {
               ))}
             </div>
 
-            {/* Pagination */}
             <div className="mt-20 pt-8 border-t border-white/5 flex items-center justify-center gap-4">
               <button disabled={page === 1} onClick={() => {setPage(1); document.querySelector('main')?.scrollTo({top:0, behavior:'smooth'})}} className="p-2 text-white/20 hover:text-[#c9a227] disabled:opacity-0 transition-colors">«</button>
               <button disabled={page === 1} onClick={() => {setPage(page-1); document.querySelector('main')?.scrollTo({top:0, behavior:'smooth'})}} className="text-[10px] uppercase tracking-widest text-white/40 hover:text-white disabled:opacity-0 transition-colors">Prev</button>
